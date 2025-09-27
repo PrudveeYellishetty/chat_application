@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 PLP Server - Personal Learning Platform Chat Backend
-A secure chat server disguised as a development tool backend.
 """
 
 import os
@@ -9,7 +8,6 @@ import asyncio
 import json
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional, Dict, Any
-import logging
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -41,10 +39,6 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Security
 security = HTTPBearer()
-
-# Logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Database Models
 class User(Base):
@@ -164,20 +158,17 @@ class ConnectionManager:
     async def connect(self, websocket: WebSocket, username: str):
         await websocket.accept()
         self.active_connections[username] = websocket
-        logger.info(f"User {username} connected via WebSocket")
 
     def disconnect(self, username: str):
         if username in self.active_connections:
             del self.active_connections[username]
-            logger.info(f"User {username} disconnected from WebSocket")
 
     async def send_personal_message(self, message: dict, username: str):
         if username in self.active_connections:
             try:
                 await self.active_connections[username].send_text(json.dumps(message))
                 return True
-            except Exception as e:
-                logger.error(f"Error sending message to {username}: {e}")
+            except Exception:
                 self.disconnect(username)
         return False
 
@@ -213,7 +204,6 @@ async def register_user(user: UserCreate, db: Session = Depends(get_db)):
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     
-    logger.info(f"New user registered: {user.username}")
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.post("/auth/login", response_model=Token)
@@ -231,7 +221,6 @@ async def login_user(user: UserLogin, db: Session = Depends(get_db)):
         data={"sub": user.username}, expires_delta=access_token_expires
     )
     
-    logger.info(f"User logged in: {user.username}")
     return {"access_token": access_token, "token_type": "bearer"}
 
 @app.post("/messages/send", response_model=MessageResponse)
@@ -266,8 +255,6 @@ async def send_message(
         db_message.delivered = True
         db.commit()
     
-    logger.info(f"Message sent from {current_user.username} to {message_data.receiver}")
-    
     return MessageResponse(
         id=db_message.id,
         sender=db_message.sender,
@@ -292,8 +279,6 @@ async def get_unread_messages(
     for message in messages:
         message.read = True
     db.commit()
-    
-    logger.info(f"Retrieved {len(messages)} unread messages for {current_user.username}")
     
     return [MessageResponse(
         id=msg.id,
@@ -320,8 +305,6 @@ async def get_message_history(
     # Reverse to get chronological order
     messages.reverse()
     
-    logger.info(f"Retrieved {len(messages)} history messages between {current_user.username} and {other_user}")
-    
     return [MessageResponse(
         id=msg.id,
         sender=msg.sender,
@@ -343,6 +326,34 @@ async def websocket_endpoint(websocket: WebSocket, username: str):
             await websocket.send_text(f"pong: {data}")
     except WebSocketDisconnect:
         manager.disconnect(username)
+
+@app.get("/users/all")
+async def get_all_users(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Get all registered users (for two-user system)"""
+    # Exclude test users
+    excluded_test_users = ["testuser", "testuser123", "testuser456", "test", "demo"]
+    users = db.query(User).filter(
+        User.is_active == True,
+        ~User.username.in_(excluded_test_users)
+    ).all()
+    return [{"username": user.username} for user in users]
+
+@app.get("/users/partner")
+async def get_partner(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Get development partner (the other user in two-user system)"""
+    # Exclude test users and current user
+    excluded_test_users = ["testuser", "testuser123", "testuser456", "test", "demo"]
+    users = db.query(User).filter(
+        User.is_active == True, 
+        User.username != current_user.username,
+        ~User.username.in_(excluded_test_users)
+    ).all()
+    
+    if users:
+        # Prefer the most recently registered user (likely your actual partner)
+        latest_user = max(users, key=lambda u: u.created_at)
+        return {"partner_username": latest_user.username}
+    return {"partner_username": None}
 
 @app.get("/health")
 async def health_check():

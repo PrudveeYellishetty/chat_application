@@ -1,60 +1,38 @@
-# PLP (Personal Learning Platform) - Terminal Chat Tool
+# PLP - Personal Learning Platform
 
-A stealth terminal-based chat application disguised as a coding productivity tool.
+A stealth terminal chat application disguised as a development productivity tool.
 
 ## 🚀 Quick Start
 
-### Server Setup (Deploy Once)
-1. Deploy server to cloud (Render/Railway)
-2. Update `CLIENT_CONFIG` in `client.py` with your server URL
+**Deploy Server:**
+1. Deploy to cloud platform (Render/Railway)
+2. Set `SECRET_KEY` environment variable
+3. Update server URL in `client.py`
 
-### Client Usage
+**Use Client:**
 ```bash
 python client.py
 ```
 
 ## 📋 Commands
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `plp send "message"` | Send a message | `plp send "Hello there!"` |
-| `plp recv` | Fetch unread messages | `plp recv` |
-| `plp hist` | View chat history | `plp hist` |
-| `plp status` | Check connection status | `plp status` |
-| `plp clear` | Clear terminal history | `plp clear` |
-| `plp exit` | Exit application | `plp exit` |
+| Command | Description |
+|---------|-------------|
+| `plp send "message"` | Send message to partner |
+| `plp recv` | Get partner messages |
+| `plp hist` | View conversation |
+| `plp partner [username]` | Set/view partner |
+| `plp status` | Check connection |
+| `plp exit` | Exit application |
 
-## 🎭 Stealth Features
+## 🎭 Features
 
-- Looks like a development tool (PLP - Personal Learning Platform)
-- Git-style command outputs
-- Fake compiler/build messages
-- Professional terminal interface
-
-## 🏗️ Architecture
-
-```
-Client (Terminal) ←→ Cloud Server ←→ Database
-     ↓                    ↓              ↓
-  Python CLI          FastAPI       SQLite/PostgreSQL
-  WebSocket           WebSocket         Messages
-  HTTP Requests       REST API          User Auth
-```
-
-## 🔒 Security
-
-- HTTPS/WSS encryption
-- User authentication
-- Message persistence
-- Cross-platform support
-
-## 🌟 Features
-
-- ✅ Real-time messaging
-- ✅ Persistent chat history
-- ✅ Cross-network support
-- ✅ Stealth mode interface
-- ✅ Multi-user support
+- ✅ Two-user private messaging
+- ✅ Stealth terminal interface
+- ✅ Real-time communication
 - ✅ Cloud deployment ready
+- ✅ Secure authentication
 
-Built for secure, professional communication disguised as development tooling.
+## � Deployment
+
+See `DEPLOYMENT.md` for detailed deployment instructions.

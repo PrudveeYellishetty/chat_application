@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 PLP Client - Personal Learning Platform Terminal Interface
-A stealth chat client disguised as a development productivity tool.
 """
 
 import os
@@ -36,6 +35,7 @@ class PLPClient:
         self.ws_url = CLIENT_CONFIG["websocket_url"]
         self.token = None
         self.username = None
+        self.friend_username = None  # Auto-detected friend
         self.websocket = None
         self.ws_thread = None
         self.session = requests.Session()
@@ -54,9 +54,10 @@ class PLPClient:
     def print_help(self):
         """Display help information"""
         print(f"\n{Fore.CYAN}PLP Development Commands:{Style.RESET_ALL}")
-        print(f"  {Fore.GREEN}plp send \"message\"{Style.RESET_ALL}     - Send development update")
-        print(f"  {Fore.GREEN}plp recv{Style.RESET_ALL}               - Check for team updates") 
-        print(f"  {Fore.GREEN}plp hist [user]{Style.RESET_ALL}        - View project communication history")
+        print(f"  {Fore.GREEN}plp send \"message\"{Style.RESET_ALL}     - Send development update to your partner")
+        print(f"  {Fore.GREEN}plp recv{Style.RESET_ALL}               - Check for partner updates") 
+        print(f"  {Fore.GREEN}plp hist{Style.RESET_ALL}               - View project communication history")
+        print(f"  {Fore.GREEN}plp partner [username]{Style.RESET_ALL} - Set or view development partner")
         print(f"  {Fore.GREEN}plp status{Style.RESET_ALL}             - Check connection status")
         print(f"  {Fore.GREEN}plp clear{Style.RESET_ALL}              - Clear terminal output")
         print(f"  {Fore.GREEN}plp help{Style.RESET_ALL}               - Show this help menu")
@@ -64,7 +65,9 @@ class PLPClient:
         print(f"\n{Fore.YELLOW}Examples:{Style.RESET_ALL}")
         print(f"  plp send \"Code review completed for branch feature-auth\"")
         print(f"  plp send \"Database migration successful - ready for deployment\"")
-        print(f"  plp hist alice")
+        print(f"  plp partner alice        # Set alice as your partner")
+        print(f"  plp partner              # Show current partner and available users")
+        print(f"  plp hist")
         print()
 
     def fake_build_output(self):
@@ -114,6 +117,12 @@ class PLPClient:
                 self.session.headers.update({"Authorization": f"Bearer {self.token}"})
                 print(f"{Fore.GREEN}✓ Authentication successful{Style.RESET_ALL}")
                 print(f"{Fore.GREEN}✓ Connected as: {username}{Style.RESET_ALL}")
+                
+                # Auto-detect development partner
+                self.detect_friend()
+                if not self.friend_username:
+                    self.auto_detect_partner()
+                
                 return True
             else:
                 print(f"{Fore.RED}✗ Authentication failed: {response.json().get('detail', 'Unknown error')}{Style.RESET_ALL}")
@@ -159,6 +168,12 @@ class PLPClient:
                 self.session.headers.update({"Authorization": f"Bearer {self.token}"})
                 print(f"{Fore.GREEN}✓ Registration successful{Style.RESET_ALL}")
                 print(f"{Fore.GREEN}✓ Connected as: {username}{Style.RESET_ALL}")
+                
+                # Auto-detect development partner
+                self.detect_friend()
+                if not self.friend_username:
+                    self.auto_detect_partner()
+                
                 return True
             else:
                 print(f"{Fore.RED}✗ Registration failed: {response.json().get('detail', 'Unknown error')}{Style.RESET_ALL}")
@@ -213,7 +228,7 @@ class PLPClient:
         formatted_time = timestamp.strftime("%H:%M:%S")
         
         print(f"\n{self.fake_build_output()}")
-        print(f"{Fore.CYAN}[{formatted_time}] {Fore.WHITE}New team update from {Fore.YELLOW}{data['sender']}{Style.RESET_ALL}")
+        print(f"{Fore.CYAN}[{formatted_time}] {Fore.WHITE}New partner update from {Fore.YELLOW}{data['sender']}{Style.RESET_ALL}")
         print(f"{Fore.WHITE}📝 {data['message']}{Style.RESET_ALL}")
         print(f"{self.fake_build_output()}")
         print(f"\n{Fore.GREEN}plp>{Style.RESET_ALL} ", end="", flush=True)
@@ -232,7 +247,7 @@ class PLPClient:
                 formatted_time = timestamp.strftime("%H:%M:%S")
                 
                 print(f"{self.fake_build_output()}")
-                print(f"{Fore.GREEN}[{formatted_time}] ✓ Update sent to {receiver}{Style.RESET_ALL}")
+                print(f"{Fore.GREEN}[{formatted_time}] ✓ Update sent to your partner{Style.RESET_ALL}")
                 if data["delivered"]:
                     print(f"{Fore.GREEN}[{formatted_time}] ✓ Delivered successfully{Style.RESET_ALL}")
                 else:
@@ -257,12 +272,12 @@ class PLPClient:
                 
                 if not messages:
                     print(f"{self.fake_build_output()}")
-                    print(f"{Fore.BLUE}📭 No new team updates available{Style.RESET_ALL}")
+                    print(f"{Fore.BLUE}📭 No new partner updates available{Style.RESET_ALL}")
                     print(f"{self.fake_build_output()}")
                     return True
                 
                 print(f"{self.fake_build_output()}")
-                print(f"{Fore.CYAN}📬 Received {len(messages)} new team update(s){Style.RESET_ALL}")
+                print(f"{Fore.CYAN}📬 Received {len(messages)} new partner update(s){Style.RESET_ALL}")
                 print(f"{Fore.CYAN}{'─' * 50}{Style.RESET_ALL}")
                 
                 for msg in messages:
@@ -297,12 +312,12 @@ class PLPClient:
                 
                 if not messages:
                     print(f"{self.fake_build_output()}")
-                    print(f"{Fore.BLUE}📭 No communication history with {other_user}{Style.RESET_ALL}")
+                    print(f"{Fore.BLUE}📭 No communication history with your partner{Style.RESET_ALL}")
                     print(f"{self.fake_build_output()}")
                     return True
                 
                 print(f"{self.fake_build_output()}")
-                print(f"{Fore.CYAN}📊 Communication History with {other_user} (last {len(messages)} messages){Style.RESET_ALL}")
+                print(f"{Fore.CYAN}📊 Development Communication History (last {len(messages)} messages){Style.RESET_ALL}")
                 print(f"{Fore.CYAN}{'═' * 60}{Style.RESET_ALL}")
                 
                 for msg in messages:
@@ -331,6 +346,87 @@ class PLPClient:
             print(f"{Fore.RED}✗ History error: {e}{Style.RESET_ALL}")
             return False
 
+    def detect_friend(self):
+        """Auto-detect your development partner"""
+        try:
+            response = self.session.get(f"{self.server_url}/users/partner")
+            if response.status_code == 200:
+                data = response.json()
+                self.friend_username = data.get('partner_username')
+                if self.friend_username:
+                    print(f"{Fore.GREEN}✓ Development partner detected: {self.friend_username}{Style.RESET_ALL}")
+                    return True
+            
+            # If no partner found, we'll need to wait for one to register
+            print(f"{Fore.YELLOW}⚠ No development partner found yet{Style.RESET_ALL}")
+            print(f"{Fore.YELLOW}📋 Share the client with your partner so they can register{Style.RESET_ALL}")
+            return False
+        except:
+            # Fallback - we'll handle this in send/receive methods
+            return False
+
+    def auto_detect_partner(self):
+        """Auto-detect partner by finding the other user in the system"""
+        try:
+            response = self.session.get(f"{self.server_url}/users/all")
+            if response.status_code == 200:
+                users = response.json()
+                # Find the other user (not yourself)
+                for user in users:
+                    if user['username'] != self.username:
+                        self.friend_username = user['username']
+                        print(f"{Fore.GREEN}✓ Partner auto-detected: {self.friend_username}{Style.RESET_ALL}")
+                        return True
+            return False
+        except:
+            return False
+
+    def set_partner(self, partner_username=None):
+        """Set or view development partner"""
+        try:
+            if partner_username:
+                # Set specific partner
+                response = self.session.get(f"{self.server_url}/users/all")
+                if response.status_code == 200:
+                    users = response.json()
+                    user_list = [user['username'] for user in users if user['username'] != self.username]
+                    
+                    if partner_username in user_list:
+                        self.friend_username = partner_username
+                        print(f"{Fore.GREEN}✓ Development partner set to: {self.friend_username}{Style.RESET_ALL}")
+                        return True
+                    else:
+                        print(f"{Fore.RED}✗ User '{partner_username}' not found{Style.RESET_ALL}")
+                        print(f"{Fore.YELLOW}Available users: {', '.join(user_list)}{Style.RESET_ALL}")
+                        return False
+            else:
+                # Show current partner and available users
+                response = self.session.get(f"{self.server_url}/users/all")
+                if response.status_code == 200:
+                    users = response.json()
+                    user_list = [user['username'] for user in users if user['username'] != self.username]
+                    
+                    print(f"{Fore.CYAN}Development Partner Status:{Style.RESET_ALL}")
+                    if self.friend_username:
+                        print(f"  Current Partner: {Fore.GREEN}{self.friend_username}{Style.RESET_ALL}")
+                    else:
+                        print(f"  Current Partner: {Fore.YELLOW}Not set{Style.RESET_ALL}")
+                    
+                    print(f"\n{Fore.CYAN}Available Users:{Style.RESET_ALL}")
+                    if user_list:
+                        for user in user_list:
+                            status = " (current)" if user == self.friend_username else ""
+                            print(f"  • {user}{status}")
+                    else:
+                        print(f"  {Fore.YELLOW}No other users found{Style.RESET_ALL}")
+                    
+                    print(f"\n{Fore.YELLOW}Usage: plp partner <username> to set partner{Style.RESET_ALL}")
+                    return True
+                    
+        except Exception as e:
+            print(f"{Fore.RED}✗ Partner management error: {e}{Style.RESET_ALL}")
+            return False
+
     def check_status(self):
         """Check connection status"""
         try:
@@ -340,6 +436,10 @@ class PLPClient:
                 print(f"{Fore.GREEN}✓ PLP Server Status: {data['status'].upper()}{Style.RESET_ALL}")
                 print(f"{Fore.GREEN}✓ Connection: Active{Style.RESET_ALL}")
                 print(f"{Fore.GREEN}✓ User: {self.username}{Style.RESET_ALL}")
+                if self.friend_username:
+                    print(f"{Fore.GREEN}✓ Development Partner: {self.friend_username}{Style.RESET_ALL}")
+                else:
+                    print(f"{Fore.YELLOW}⚠ Development Partner: Not detected{Style.RESET_ALL}")
                 print(f"{Fore.BLUE}📊 Active developers: {data.get('active_connections', 'Unknown')}{Style.RESET_ALL}")
             else:
                 print(f"{Fore.YELLOW}⚠ Server responding with status: {response.status_code}{Style.RESET_ALL}")
@@ -379,29 +479,44 @@ class PLPClient:
                 print(f"{Fore.RED}Message cannot be empty{Style.RESET_ALL}")
                 return True
             
-            # For now, assume sending to a default recipient
-            # In a real implementation, you might want to specify recipient
-            receiver = input(f"Send to (username): ").strip()
-            if not receiver:
-                print(f"{Fore.RED}Recipient username required{Style.RESET_ALL}")
-                return True
+            # Auto-detect friend if not already known
+            if not self.friend_username:
+                self.detect_friend()
+            
+            if not self.friend_username:
+                # Still no friend found, get all users and pick the other one
+                if not self.auto_detect_partner():
+                    print(f"{Fore.RED}✗ No development partner found{Style.RESET_ALL}")
+                    print(f"{Fore.YELLOW}📋 Use 'plp partner' to see available users and set your partner{Style.RESET_ALL}")
+                    return True
                 
-            self.send_message(receiver, message)
+            self.send_message(self.friend_username, message)
             
         elif subcommand == "recv":
             self.receive_messages()
             
         elif subcommand == "hist":
-            if len(parts) < 3:
-                other_user = input("Show history with (username): ").strip()
-            else:
-                other_user = parts[2]
-                
-            if not other_user:
-                print(f"{Fore.RED}Username required for history{Style.RESET_ALL}")
+            # Auto-detect friend if not already known
+            if not self.friend_username:
+                self.detect_friend()
+                if not self.friend_username:
+                    self.auto_detect_partner()
+            
+            if not self.friend_username:
+                print(f"{Fore.RED}✗ No development partner found{Style.RESET_ALL}")
+                print(f"{Fore.YELLOW}📋 Use 'plp partner' to see available users and set your partner{Style.RESET_ALL}")
                 return True
                 
-            self.get_history(other_user)
+            self.get_history(self.friend_username)
+            
+        elif subcommand == "partner":
+            if len(parts) >= 3:
+                # Set specific partner
+                partner_name = parts[2]
+                self.set_partner(partner_name)
+            else:
+                # Show partner status and available users
+                self.set_partner()
             
         elif subcommand == "status":
             self.check_status()
@@ -433,7 +548,11 @@ class PLPClient:
         time.sleep(1)  # Give WebSocket time to connect
         
         print(f"\n{Fore.GREEN}🚀 PLP Development Environment Ready{Style.RESET_ALL}")
-        print(f"{Fore.BLUE}Real-time team updates: {'✓ Active' if self.ws_thread and self.ws_thread.is_alive() else '✗ Unavailable'}{Style.RESET_ALL}")
+        if self.friend_username:
+            print(f"{Fore.GREEN}👥 Development Partner: {self.friend_username}{Style.RESET_ALL}")
+        else:
+            print(f"{Fore.YELLOW}⚠ Development Partner: Not found (they need to register){Style.RESET_ALL}")
+        print(f"{Fore.BLUE}📡 Real-time updates: {'✓ Active' if self.ws_thread and self.ws_thread.is_alive() else '✗ Unavailable'}{Style.RESET_ALL}")
         
         # Main command loop
         try:
